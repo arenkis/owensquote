@@ -172,6 +172,10 @@ The `data/interviews.json` file should contain an array of interview objects:
 ]
 ```
 
+## Copyright Notice
+
+All interviews are copyright of Rick Owens or their respective media outlets and can be found at https://www.rickowens.eu/interviews
+
 ## Email Design
 
 The emails feature a Rick Owens-inspired aesthetic:
