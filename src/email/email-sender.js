@@ -107,7 +107,7 @@ class EmailSender {
     const text = `
 Rick Owens Quote of the Day
 
-"${quote}"
+"${quote.toUpperCase()}"
 
 Source: ${source.title}
 ${source.url}
@@ -161,7 +161,7 @@ ${new Date().toLocaleDateString('en-US', {
     }
     .quote {
       font-size: 18px;
-      font-style: italic;
+      font-style: normal;
       text-align: center;
       margin: 40px 0;
       padding: 0 20px;
@@ -211,7 +211,7 @@ ${new Date().toLocaleDateString('en-US', {
     </div>
 
     <div class="quote">
-      ${quote}
+      ${quote.toUpperCase()}
     </div>
 
     <div class="source">

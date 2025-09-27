@@ -126,7 +126,7 @@ OWENSQUOTE - ${date}
 From: "${interview.title}"
 Source: ${interview.url}
 
-${quotes.map((quote, index) => `"${quote.text}"`).join('\n\n')}
+${quotes.map((quote, index) => `"${quote.text.toUpperCase()}"`).join('\n\n')}
 
 ---
 OWENSQUOTE
@@ -221,7 +221,7 @@ OWENSQUOTE
       line-height: 1.6;
       color: #000000;
       margin: 20px 0;
-      font-style: italic;
+      font-style: normal;
     }
 
     .quote-attribution {
@@ -289,7 +289,7 @@ OWENSQUOTE
 
       ${quotes.map((quote, index) => `
         <div class="quote-container">
-          <div class="quote-text">"${quote.text}"</div>
+          <div class="quote-text">"${quote.text.toUpperCase()}"</div>
           <div class="quote-attribution">Rick Owens</div>
         </div>
       `).join('')}
