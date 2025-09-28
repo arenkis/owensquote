@@ -43,7 +43,7 @@ const configSchema = Joi.object({
   EMAIL_SECURE: Joi.boolean().default(false).description('Use TLS for email'),
   EMAIL_USER: Joi.string().email().required().description('Email username'),
   EMAIL_PASSWORD: Joi.string().required().description('Email password or app password'),
-  EMAIL_FROM: Joi.string().email().optional().description('From email address (defaults to EMAIL_USER)'),
+  EMAIL_FROM: Joi.string().optional().description('From email address with optional display name (defaults to EMAIL_USER)'),
 
   // Recipients Configuration
   EMAIL_RECIPIENTS: Joi.string().required().description('Comma-separated list of email recipients'),

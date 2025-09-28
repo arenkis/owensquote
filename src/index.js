@@ -83,7 +83,7 @@ class RickOwensQuoteBot {
 
       await this.emailSender.sendQuoteEmail(
         recipients,
-        `OWENSQUOTE: ${interview.title}`,
+        interview.title,
         emailContent.text,
         emailContent.html
       );
