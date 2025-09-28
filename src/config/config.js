@@ -1,5 +1,6 @@
 import dotenv from 'dotenv';
 import Joi from 'joi';
+import os from 'os';
 import { logger } from '../utils/logger.js';
 
 // Load environment variables
@@ -14,16 +15,21 @@ const configSchema = Joi.object({
   // AI Provider Configuration
   AI_PROVIDER: Joi.string().valid('openai', 'anthropic', 'gemini', 'ollama', 'transformers').default('openai').description('AI provider to use'),
 
+  // Platform-specific AI Provider Configuration (optional overrides)
+  AI_PROVIDER_WINDOWS: Joi.string().valid('', 'openai', 'anthropic', 'gemini', 'ollama', 'transformers').optional().description('AI provider to use on Windows (overrides AI_PROVIDER)'),
+  AI_PROVIDER_MACOS: Joi.string().valid('', 'openai', 'anthropic', 'gemini', 'ollama', 'transformers').optional().description('AI provider to use on macOS (overrides AI_PROVIDER)'),
+  AI_PROVIDER_LINUX: Joi.string().valid('', 'openai', 'anthropic', 'gemini', 'ollama', 'transformers').optional().description('AI provider to use on Linux (overrides AI_PROVIDER)'),
+
   // OpenAI Configuration
-  OPENAI_API_KEY: Joi.string().when('AI_PROVIDER', { is: 'openai', then: Joi.required(), otherwise: Joi.optional() }).description('OpenAI API key'),
+  OPENAI_API_KEY: Joi.string().optional().description('OpenAI API key'),
   OPENAI_MODEL: Joi.string().default('gpt-4o-mini').description('OpenAI model to use'),
 
   // Anthropic Configuration
-  ANTHROPIC_API_KEY: Joi.string().when('AI_PROVIDER', { is: 'anthropic', then: Joi.required(), otherwise: Joi.optional() }).description('Anthropic API key'),
+  ANTHROPIC_API_KEY: Joi.string().optional().description('Anthropic API key'),
   ANTHROPIC_MODEL: Joi.string().default('claude-3-5-haiku-20241022').description('Anthropic model to use'),
 
   // Gemini Configuration
-  GEMINI_API_KEY: Joi.string().when('AI_PROVIDER', { is: 'gemini', then: Joi.required(), otherwise: Joi.optional() }).description('Gemini API key'),
+  GEMINI_API_KEY: Joi.string().optional().description('Gemini API key'),
   GEMINI_MODEL: Joi.string().default('gemini-1.5-flash').description('Gemini model to use'),
 
   // Ollama Configuration
@@ -75,8 +81,63 @@ class Config {
     }
 
     this.validated = value;
+
+    // Additional validation for platform-specific provider requirements
+    this.validatePlatformSpecificRequirements();
+
     this.isValid = true;
     logger.info('Configuration validated successfully');
+  }
+
+  validatePlatformSpecificRequirements() {
+    // Get platform-specific provider directly without using the method that checks isValid
+    const platform = os.platform();
+    let platformProvider;
+
+    switch (platform) {
+      case 'win32':
+        platformProvider = this.validated.AI_PROVIDER_WINDOWS;
+        break;
+      case 'darwin':
+        platformProvider = this.validated.AI_PROVIDER_MACOS;
+        break;
+      case 'linux':
+        platformProvider = this.validated.AI_PROVIDER_LINUX;
+        break;
+      default:
+        platformProvider = null;
+    }
+
+    const provider = (platformProvider && platformProvider.trim() !== '') ? platformProvider : this.validated.AI_PROVIDER;
+    const issues = [];
+
+    // Check if API key is required and present for the selected provider
+    switch (provider) {
+      case 'openai':
+        if (!this.validated.OPENAI_API_KEY) {
+          issues.push('OPENAI_API_KEY is required when using OpenAI provider');
+        }
+        break;
+      case 'anthropic':
+        if (!this.validated.ANTHROPIC_API_KEY) {
+          issues.push('ANTHROPIC_API_KEY is required when using Anthropic provider');
+        }
+        break;
+      case 'gemini':
+        if (!this.validated.GEMINI_API_KEY) {
+          issues.push('GEMINI_API_KEY is required when using Gemini provider');
+        }
+        break;
+      case 'ollama':
+      case 'transformers':
+        // No API key required
+        break;
+    }
+
+    if (issues.length > 0) {
+      logger.error('Platform-specific configuration validation failed:', issues);
+      throw new Error(`Platform-specific configuration validation failed: ${issues.join(', ')}`);
+    }
   }
 
   get(key) {
@@ -86,8 +147,34 @@ class Config {
     return this.validated[key];
   }
 
+  getPlatformSpecificProvider() {
+    const platform = os.platform();
+    let platformProvider;
+
+    switch (platform) {
+      case 'win32':
+        platformProvider = this.get('AI_PROVIDER_WINDOWS');
+        break;
+      case 'darwin':
+        platformProvider = this.get('AI_PROVIDER_MACOS');
+        break;
+      case 'linux':
+        platformProvider = this.get('AI_PROVIDER_LINUX');
+        break;
+      default:
+        platformProvider = null;
+    }
+
+    // Return platform-specific provider if set and not empty, otherwise fall back to general AI_PROVIDER
+    const finalProvider = (platformProvider && platformProvider.trim() !== '') ? platformProvider : this.get('AI_PROVIDER');
+
+    logger.debug(`Platform: ${platform}, Provider: ${finalProvider} ${platformProvider ? '(platform-specific)' : '(default)'}`);
+
+    return finalProvider;
+  }
+
   getAIConfig() {
-    const provider = this.get('AI_PROVIDER');
+    const provider = this.getPlatformSpecificProvider();
     const config = {
       provider,
       maxTokens: this.get('AI_MAX_TOKENS'),
@@ -177,6 +264,10 @@ class Config {
   getDebugInfo() {
     const sanitized = { ...this.validated };
 
+    // Add platform information
+    sanitized.CURRENT_PLATFORM = os.platform();
+    sanitized.EFFECTIVE_AI_PROVIDER = this.getPlatformSpecificProvider();
+
     // Remove sensitive information
     const sensitiveKeys = [
       'OPENAI_API_KEY',
@@ -195,12 +286,33 @@ class Config {
     return sanitized;
   }
 
+  // Get platform-specific configuration info
+  getPlatformInfo() {
+    const platform = os.platform();
+    const effectiveProvider = this.getPlatformSpecificProvider();
+    const defaultProvider = this.get('AI_PROVIDER');
+
+    return {
+      platform: platform,
+      architecture: os.arch(),
+      osVersion: os.release(),
+      defaultProvider: defaultProvider,
+      effectiveProvider: effectiveProvider,
+      isPlatformSpecific: effectiveProvider !== defaultProvider,
+      platformSettings: {
+        windows: this.get('AI_PROVIDER_WINDOWS'),
+        macos: this.get('AI_PROVIDER_MACOS'),
+        linux: this.get('AI_PROVIDER_LINUX')
+      }
+    };
+  }
+
   // Validate that all required services can be reached
   async validateConnections() {
     const issues = [];
 
     // Validate API key formats based on provider
-    const provider = this.get('AI_PROVIDER');
+    const provider = this.getPlatformSpecificProvider();
     switch (provider) {
       case 'openai':
         const openaiKey = this.get('OPENAI_API_KEY');
@@ -260,6 +372,12 @@ LOG_LEVEL=info
 # AI Provider Configuration
 # Choose one: 'openai', 'anthropic', 'gemini', 'ollama', or 'transformers'
 AI_PROVIDER=openai
+
+# Platform-specific AI Provider Configuration (optional overrides)
+# If left blank, will use AI_PROVIDER setting above
+AI_PROVIDER_WINDOWS=
+AI_PROVIDER_MACOS=
+AI_PROVIDER_LINUX=
 
 # OpenAI Configuration (if using OpenAI)
 OPENAI_API_KEY=sk-your-openai-api-key-here
