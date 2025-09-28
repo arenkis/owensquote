@@ -34,6 +34,11 @@ Edit `.env` with your credentials:
 # Choose your AI provider
 AI_PROVIDER=openai  # or 'anthropic', 'gemini', 'ollama', or 'transformers'
 
+# Optional: Platform-specific overrides
+AI_PROVIDER_WINDOWS=ollama
+AI_PROVIDER_MACOS=anthropic
+AI_PROVIDER_LINUX=
+
 # Add your API key (not needed for local providers)
 OPENAI_API_KEY=sk-your-key-here
 
@@ -119,6 +124,63 @@ TRANSFORMERS_MODEL=Xenova/LaMini-Flan-T5-248M
 - Model downloads automatically (~95MB)
 - Perfect fallback option
 
+## Platform-Specific Configuration
+
+You can configure different AI providers for different operating systems. This is useful when you want to use local models on some platforms and cloud APIs on others.
+
+### Basic Usage
+
+Add platform-specific overrides to your `.env` file:
+
+```bash
+# Default provider for all platforms
+AI_PROVIDER=openai
+
+# Platform-specific overrides (optional)
+AI_PROVIDER_WINDOWS=ollama
+AI_PROVIDER_MACOS=anthropic
+AI_PROVIDER_LINUX=
+```
+
+### How It Works
+
+- **If a platform-specific setting is provided**, it overrides the default `AI_PROVIDER`
+- **If left blank**, the platform uses the default `AI_PROVIDER` setting
+- **Validation occurs for the effective provider** on your current platform
+
+### Example Scenarios
+
+**Scenario 1: Local models on Windows, Cloud API on macOS**
+```bash
+AI_PROVIDER=openai
+AI_PROVIDER_WINDOWS=ollama
+AI_PROVIDER_MACOS=anthropic
+AI_PROVIDER_LINUX=
+```
+
+**Scenario 2: Same provider everywhere**
+```bash
+AI_PROVIDER=anthropic
+AI_PROVIDER_WINDOWS=
+AI_PROVIDER_MACOS=
+AI_PROVIDER_LINUX=
+```
+
+**Scenario 3: Different models per platform**
+```bash
+AI_PROVIDER=openai
+AI_PROVIDER_WINDOWS=ollama    # Local Ollama with llama3.1
+AI_PROVIDER_MACOS=anthropic   # Claude API for macOS
+AI_PROVIDER_LINUX=transformers # Local transformers.js
+```
+
+### Platform Detection
+
+The system automatically detects:
+- **Windows** (`win32`)
+- **macOS** (`darwin`)
+- **Linux** (`linux`)
+
 ## Email Setup
 
 ### Gmail Setup
@@ -173,6 +235,9 @@ CRON_SCHEDULE=0 10 * * 1
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
 | `AI_PROVIDER` | Yes | `openai` | AI provider: `openai`, `anthropic`, `gemini`, `ollama`, or `transformers` |
+| `AI_PROVIDER_WINDOWS` | No | - | Windows-specific AI provider (overrides `AI_PROVIDER`) |
+| `AI_PROVIDER_MACOS` | No | - | macOS-specific AI provider (overrides `AI_PROVIDER`) |
+| `AI_PROVIDER_LINUX` | No | - | Linux-specific AI provider (overrides `AI_PROVIDER`) |
 | `OPENAI_API_KEY` | If using OpenAI | - | OpenAI API key |
 | `ANTHROPIC_API_KEY` | If using Claude | - | Anthropic API key |
 | `GEMINI_API_KEY` | If using Gemini | - | Google Gemini API key |
