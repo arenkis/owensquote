@@ -4,11 +4,13 @@ A sophisticated Node.js application that extracts meaningful quotes from Rick Ow
 
 ## Features
 
-- 🤖 **Multi-AI Provider Support**: Works with OpenAI, Anthropic (Claude), and Google Gemini
+- 🤖 **Multi-AI Provider Support**: Works with OpenAI, Anthropic (Claude), Google Gemini, Ollama, and Transformers.js
+- 🏠 **Local LLM Support**: Run completely offline with Ollama or Transformers.js
 - 📧 **Rick Owens Aesthetic Emails**: Brutalist-inspired HTML email design
 - 📅 **Scheduled Delivery**: Automated daily quotes via cron scheduling
 - 🎯 **Smart Quote Extraction**: AI-powered selection of meaningful, philosophical quotes
 - 📱 **Responsive Design**: Email templates optimized for all devices
+- 🔒 **Privacy-First**: Option to run entirely local with no API calls
 
 ## Quick Start
 
@@ -30,15 +32,16 @@ Edit `.env` with your credentials:
 
 ```bash
 # Choose your AI provider
-AI_PROVIDER=openai  # or 'anthropic' or 'gemini'
+AI_PROVIDER=openai  # or 'anthropic', 'gemini', 'ollama', or 'transformers'
 
-# Add your API key
+# Add your API key (not needed for local providers)
 OPENAI_API_KEY=sk-your-key-here
 
 # Email configuration
 EMAIL_HOST=smtp.gmail.com
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-app-password
+EMAIL_FROM="OWENSQUOTE" <your-email@gmail.com>
 EMAIL_RECIPIENTS=recipient@example.com
 
 # Test mode
@@ -87,6 +90,35 @@ GEMINI_API_KEY=your-gemini-key
 GEMINI_MODEL=gemini-1.5-flash
 ```
 
+### Ollama (Local)
+```bash
+AI_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=qwen2.5:1.5b
+```
+
+**Setup Ollama:**
+1. Install Ollama from https://ollama.ai/download
+2. Pull a model: `ollama pull qwen2.5:1.5b`
+3. Ensure Ollama is running: `ollama serve`
+
+**Recommended models:**
+- `qwen2.5:0.5b` (394MB) - Ultra lightweight
+- `qwen2.5:1.5b` (934MB) - Good balance
+- `llama3.1:8b` (4.7GB) - High quality
+
+### Transformers.js (Local, No Dependencies)
+```bash
+AI_PROVIDER=transformers
+TRANSFORMERS_MODEL=Xenova/LaMini-Flan-T5-248M
+```
+
+**Features:**
+- Runs entirely in Node.js
+- No external dependencies required
+- Model downloads automatically (~95MB)
+- Perfect fallback option
+
 ## Email Setup
 
 ### Gmail Setup
@@ -99,6 +131,7 @@ EMAIL_HOST=smtp.gmail.com
 EMAIL_PORT=587
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASSWORD=your-16-character-app-password
+EMAIL_FROM="OWENSQUOTE" <your-email@gmail.com>
 ```
 
 ### Other Providers
@@ -139,16 +172,20 @@ CRON_SCHEDULE=0 10 * * 1
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `AI_PROVIDER` | Yes | `openai` | AI provider: `openai`, `anthropic`, or `gemini` |
+| `AI_PROVIDER` | Yes | `openai` | AI provider: `openai`, `anthropic`, `gemini`, `ollama`, or `transformers` |
 | `OPENAI_API_KEY` | If using OpenAI | - | OpenAI API key |
 | `ANTHROPIC_API_KEY` | If using Claude | - | Anthropic API key |
 | `GEMINI_API_KEY` | If using Gemini | - | Google Gemini API key |
+| `OLLAMA_BASE_URL` | If using Ollama | `http://localhost:11434/v1` | Ollama server URL |
+| `OLLAMA_MODEL` | If using Ollama | `qwen2.5:1.5b` | Ollama model name |
+| `TRANSFORMERS_MODEL` | If using Transformers.js | `Xenova/LaMini-Flan-T5-248M` | Transformers.js model |
 | `AI_MAX_TOKENS` | No | `500` | Maximum tokens for AI response |
 | `AI_TEMPERATURE` | No | `0.7` | AI creativity level (0-2) |
 | `EMAIL_HOST` | Yes | - | SMTP host |
 | `EMAIL_PORT` | No | `587` | SMTP port |
 | `EMAIL_USER` | Yes | - | Email username |
 | `EMAIL_PASSWORD` | Yes | - | Email password/app password |
+| `EMAIL_FROM` | No | Uses `EMAIL_USER` | From address with optional display name |
 | `EMAIL_RECIPIENTS` | Yes | - | Comma-separated recipient list |
 | `INTERVIEWS_FILE_PATH` | No | `./data/interviews.json` | Path to interview data |
 | `CRON_SCHEDULE` | No | `0 9 * * *` | Cron schedule for automation |
@@ -221,8 +258,10 @@ rick-owens-quote/
 - Check logs in `logs/` directory
 
 **AI extraction failing:**
-- Verify API key is correct and active
-- Check API quota/billing
+- Verify API key is correct and active (for cloud providers)
+- Check API quota/billing (for cloud providers)
+- For Ollama: ensure Ollama is running and model is pulled
+- For Transformers.js: check internet connection for initial download
 - Try a different AI provider
 
 **No interviews found:**
