@@ -1,12 +1,18 @@
 import OpenAI from 'openai';
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { pipeline } from '@xenova/transformers';
 import { logger } from '../utils/logger.js';
 
 class QuoteExtractor {
   constructor(config) {
-    if (!config || !config.provider || !config.apiKey) {
+    if (!config || !config.provider) {
       throw new Error('AI provider configuration is required');
+    }
+
+    // Some providers don't require API keys (ollama, transformers)
+    if (!config.apiKey && !['ollama', 'transformers'].includes(config.provider)) {
+      throw new Error('API key is required for this provider');
     }
 
     this.config = config;
@@ -22,6 +28,13 @@ class QuoteExtractor {
         return new Anthropic({ apiKey: this.config.apiKey });
       case 'gemini':
         return new GoogleGenerativeAI(this.config.apiKey);
+      case 'ollama':
+        return new OpenAI({
+          baseURL: this.config.baseURL || 'http://localhost:11434/v1',
+          apiKey: 'ollama' // Ollama doesn't require real API key
+        });
+      case 'transformers':
+        return null; // Will be initialized when needed
       default:
         throw new Error(`Unsupported AI provider: ${this.provider}`);
     }
@@ -61,6 +74,12 @@ Return ONLY the quote itself, without quotation marks, attribution, or additiona
           break;
         case 'gemini':
           response = await this.extractWithGemini(prompt);
+          break;
+        case 'ollama':
+          response = await this.extractWithOllama(prompt);
+          break;
+        case 'transformers':
+          response = await this.extractWithTransformers(prompt);
           break;
         default:
           throw new Error(`Unsupported provider: ${this.provider}`);
@@ -136,6 +155,53 @@ Return ONLY the quote itself, without quotation marks, attribution, or additiona
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
+  }
+
+  async extractWithOllama(prompt) {
+    const completion = await this.client.chat.completions.create({
+      model: this.config.model || 'qwen2.5:1.5b',
+      messages: [
+        {
+          role: 'system',
+          content: `You are an expert at identifying meaningful, thought-provoking quotes from Rick Owens interviews. Extract the most impactful quote that captures Rick's philosophy, aesthetic vision, or unique perspective.`
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      max_tokens: this.config.maxTokens || 300,
+      temperature: this.config.temperature || 0.7
+    });
+
+    return completion.choices[0]?.message?.content;
+  }
+
+  async extractWithTransformers(prompt) {
+    // Initialize the pipeline if not already done
+    if (!this.transformersPipeline) {
+      logger.info('Initializing Transformers.js pipeline...');
+      this.transformersPipeline = await pipeline(
+        'text2text-generation',
+        this.config.model || 'Xenova/LaMini-Flan-T5-248M',
+        { device: 'cpu' }
+      );
+    }
+
+    // For the small T5 model, we need a simpler, more direct prompt
+    // Extract content from the full prompt since we only have access to prompt here
+    const contentMatch = prompt.match(/Interview Content:\s*(.*?)(?:\n\nInstructions:|$)/s);
+    const content = contentMatch ? contentMatch[1] : prompt;
+
+    const simplePrompt = `Extract the most meaningful quote from this Rick Owens interview that shows his philosophy or vision:\n\n${content.substring(0, 2000)}\n\nMost meaningful quote:`;
+
+    const result = await this.transformersPipeline(simplePrompt, {
+      max_length: this.config.maxTokens || 100,
+      temperature: this.config.temperature || 0.7,
+      do_sample: true
+    });
+
+    return result[0]?.generated_text || '';
   }
 
   cleanQuote(rawQuote) {

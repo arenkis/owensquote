@@ -12,7 +12,7 @@ const configSchema = Joi.object({
   LOG_LEVEL: Joi.string().valid('error', 'warn', 'info', 'http', 'verbose', 'debug', 'silly').default('info'),
 
   // AI Provider Configuration
-  AI_PROVIDER: Joi.string().valid('openai', 'anthropic', 'gemini').default('openai').description('AI provider to use'),
+  AI_PROVIDER: Joi.string().valid('openai', 'anthropic', 'gemini', 'ollama', 'transformers').default('openai').description('AI provider to use'),
 
   // OpenAI Configuration
   OPENAI_API_KEY: Joi.string().when('AI_PROVIDER', { is: 'openai', then: Joi.required(), otherwise: Joi.optional() }).description('OpenAI API key'),
@@ -25,6 +25,13 @@ const configSchema = Joi.object({
   // Gemini Configuration
   GEMINI_API_KEY: Joi.string().when('AI_PROVIDER', { is: 'gemini', then: Joi.required(), otherwise: Joi.optional() }).description('Gemini API key'),
   GEMINI_MODEL: Joi.string().default('gemini-1.5-flash').description('Gemini model to use'),
+
+  // Ollama Configuration
+  OLLAMA_BASE_URL: Joi.string().default('http://localhost:11434/v1').description('Ollama server base URL'),
+  OLLAMA_MODEL: Joi.string().default('qwen2.5:1.5b').description('Ollama model to use'),
+
+  // Transformers.js Configuration
+  TRANSFORMERS_MODEL: Joi.string().default('Xenova/LaMini-Flan-T5-248M').description('Transformers.js model to use'),
 
   // Common AI Configuration
   AI_MAX_TOKENS: Joi.number().integer().min(100).max(2000).default(500),
@@ -105,6 +112,17 @@ class Config {
           ...config,
           apiKey: this.get('GEMINI_API_KEY'),
           model: this.get('GEMINI_MODEL')
+        };
+      case 'ollama':
+        return {
+          ...config,
+          baseURL: this.get('OLLAMA_BASE_URL'),
+          model: this.get('OLLAMA_MODEL')
+        };
+      case 'transformers':
+        return {
+          ...config,
+          model: this.get('TRANSFORMERS_MODEL')
         };
       default:
         throw new Error(`Unsupported AI provider: ${provider}`);
@@ -202,6 +220,12 @@ class Config {
           issues.push('Gemini API key appears to be invalid');
         }
         break;
+      case 'ollama':
+        // No API key validation needed for Ollama
+        break;
+      case 'transformers':
+        // No API key validation needed for Transformers.js
+        break;
     }
 
     // Validate email recipients format
@@ -234,7 +258,7 @@ NODE_ENV=development
 LOG_LEVEL=info
 
 # AI Provider Configuration
-# Choose one: 'openai', 'anthropic', or 'gemini'
+# Choose one: 'openai', 'anthropic', 'gemini', 'ollama', or 'transformers'
 AI_PROVIDER=openai
 
 # OpenAI Configuration (if using OpenAI)
@@ -248,6 +272,13 @@ ANTHROPIC_MODEL=claude-3-5-haiku-20241022
 # Gemini Configuration (if using Google Gemini)
 GEMINI_API_KEY=your-gemini-api-key-here
 GEMINI_MODEL=gemini-1.5-flash
+
+# Ollama Configuration (if using local Ollama)
+OLLAMA_BASE_URL=http://localhost:11434/v1
+OLLAMA_MODEL=qwen2.5:1.5b
+
+# Transformers.js Configuration (if using local Transformers.js)
+TRANSFORMERS_MODEL=Xenova/LaMini-Flan-T5-248M
 
 # Common AI Configuration
 AI_MAX_TOKENS=500

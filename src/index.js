@@ -365,7 +365,11 @@ process.on('uncaughtException', (error) => {
 });
 
 // Start the bot if this file is run directly
-if (import.meta.url === `file://${process.argv[1]}`) {
+const isMainModule = import.meta.url === `file://${process.argv[1]}` ||
+                     import.meta.url === `file:///${process.argv[1]}` ||
+                     new URL(import.meta.url).pathname.endsWith(process.argv[1].replace(/\\/g, '/'));
+
+if (isMainModule) {
   const bot = new RickOwensQuoteBot();
   bot.start().catch((error) => {
     logger.error('Failed to start bot:', error);
