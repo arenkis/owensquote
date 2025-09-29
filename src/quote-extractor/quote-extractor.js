@@ -55,7 +55,9 @@ Instructions:
 4. The quote should be memorable and thought-provoking
 5. It should represent his artistic vision
 
-Return ONLY the quote itself, without quotation marks, attribution, or additional commentary. The quote should be complete and make sense on its own.`;
+IMPORTANT: If you cannot find any meaningful quotes in the content, return exactly "ERROR_NO_QUOTE" (without quotes). Do not return explanations like "I was unable to find quotes" or similar text.
+
+Return ONLY the quote itself, without quotation marks, attribution, or additional commentary. The quote should be complete and make sense on its own. If no quote can be found, return exactly "ERROR_NO_QUOTE".`;
   }
 
   async extractQuotes(content, title) {
@@ -87,8 +89,9 @@ Return ONLY the quote itself, without quotation marks, attribution, or additiona
 
       const cleanedQuote = this.cleanQuote(response);
 
-      if (!cleanedQuote) {
-        throw new Error('No valid quote extracted from response');
+      if (!cleanedQuote || cleanedQuote === 'ERROR_NO_QUOTE') {
+        logger.warn('AI returned error flag or no valid quote found');
+        return null; // Return null to indicate no quote found
       }
 
       logger.info(`Successfully extracted quote (${cleanedQuote.length} characters)`);

@@ -69,8 +69,9 @@ class RickOwensQuoteBot {
       logger.info('Extracting quotes using AI...');
       const quotes = await this.quoteExtractor.extractQuotes(interview.content, interview.title);
 
-      if (!quotes || quotes.length === 0) {
-        throw new Error('No meaningful quotes extracted');
+      if (!quotes || quotes.length === 0 || quotes === null) {
+        logger.warn('No meaningful quotes extracted - returning error flag');
+        return { success: false, error: 'NO_QUOTES_FOUND' };
       }
 
       logger.info(`Extracted ${quotes.length} quotes`);
@@ -317,7 +318,11 @@ OWENSQUOTE
 
       if (scheduleConfig.runOnce) {
         logger.info('Running once and exiting...');
-        await this.processQuote();
+        const result = await this.processQuote();
+        if (result && !result.success) {
+          logger.warn(`Run completed with no quotes: ${result.error}`);
+          process.exit(1); // Exit with error code to indicate no quotes found
+        }
         process.exit(0);
       } else {
         logger.info(`Starting scheduled execution with cron: ${scheduleConfig.cronSchedule}`);
@@ -326,7 +331,10 @@ OWENSQUOTE
           scheduleConfig.cronSchedule,
           async () => {
             try {
-              await this.processQuote();
+              const result = await this.processQuote();
+              if (result && !result.success) {
+                logger.warn(`Scheduled job completed with no quotes: ${result.error}`);
+              }
             } catch (error) {
               logger.error('Scheduled job failed:', error);
             }
